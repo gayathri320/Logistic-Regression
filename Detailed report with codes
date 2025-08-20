@@ -1,0 +1,224 @@
+INTRODUCTION
+Coronary heart disease (CHD) is one of the leading causes of death worldwide. Identifying individuals who are at risk of developing CHD in the future can help in early intervention and treatment. In this lab, we use data from the Framingham Heart Study to build a predictive model that estimates the 10-year risk of CHD for each patient. The dataset includes various demographic, behavioral, and medical risk factors that can be used to understand and predict heart disease risk.
+
+OBJECTIVE
+The main objective  is to use logistic regression to predict whether a patient will develop coronary heart disease within 10 years based on their health profile. We aim to:
+1.	Fit a logistic regression model using the Framingham dataset.
+2.	Identify important risk factors associated with CHD.
+3.	Evaluate the model using metrics such as accuracy, sensitivity, specificity, and AUC.
+4.	Interpret the results and understand how well the model performs in identifying CHD risk.
+
+METHODOLOGY
+1.	Data Loading and Cleaning:
+The dataset was imported using the read_csv() function. Rows with missing values were removed using the na.omit() function to ensure a complete dataset for modeling.
+2.	Data Partitioning:
+The cleaned data was randomly split into training (70%) and testing (30%) sets using the sample() function with a fixed seed for reproducibility.
+3.	Model Building:
+A logistic regression model was built using the glm() function with the binary outcome variable TenYearCHD and all other variables as predictors.
+4.	Model Evaluation:
+Predictions were made on the test dataset. A confusion matrix was used to calculate sensitivity (true positive rate) and specificity (true negative rate). The ROC curve was plotted using the pROC package, and the AUC (Area Under the Curve) was calculated to measure model performance.
+5.	Manual Probability Calculation:
+The predicted probability for a specific patient was also calculated manually using the logistic regression formula to verify the model output.
+
+IMPLEMENTATION IN R
+# Load necessary libraries
+library(pROC)
+## Warning: package 'pROC' was built under R version 4.4.2
+## Type 'citation("pROC")' for a citation.
+## 
+## Attaching package: 'pROC'
+## The following objects are masked from 'package:stats':
+## 
+##     cov, smooth, var
+# Load dataset 
+library(readr)
+## Warning: package 'readr' was built under R version 4.4.2
+framingham <- read_csv("framingham.csv")
+## Rows: 4238 Columns: 16
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: ","
+## dbl (16): male, age, education, currentSmoker, cigsPerDay, BPMeds, prevalent...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+head(framingham)
+## # A tibble: 6 × 16
+##    male   age education currentSmoker cigsPerDay BPMeds prevalentStroke
+##   <dbl> <dbl>     <dbl>         <dbl>      <dbl>  <dbl>           <dbl>
+## 1     1    39         4             0          0      0               0
+## 2     0    46         2             0          0      0               0
+## 3     1    48         1             1         20      0               0
+## 4     0    61         3             1         30      0               0
+## 5     0    46         3             1         23      0               0
+## 6     0    43         2             0          0      0               0
+## # ℹ 9 more variables: prevalentHyp <dbl>, diabetes <dbl>, totChol <dbl>,
+## #   sysBP <dbl>, diaBP <dbl>, BMI <dbl>, heartRate <dbl>, glucose <dbl>,
+## #   TenYearCHD <dbl>
+summary(framingham)
+##       male             age          education     currentSmoker   
+##  Min.   :0.0000   Min.   :32.00   Min.   :1.000   Min.   :0.0000  
+##  1st Qu.:0.0000   1st Qu.:42.00   1st Qu.:1.000   1st Qu.:0.0000  
+##  Median :0.0000   Median :49.00   Median :2.000   Median :0.0000  
+##  Mean   :0.4292   Mean   :49.58   Mean   :1.979   Mean   :0.4941  
+##  3rd Qu.:1.0000   3rd Qu.:56.00   3rd Qu.:3.000   3rd Qu.:1.0000  
+##  Max.   :1.0000   Max.   :70.00   Max.   :4.000   Max.   :1.0000  
+##                                   NA's   :105                     
+##    cigsPerDay         BPMeds        prevalentStroke     prevalentHyp   
+##  Min.   : 0.000   Min.   :0.00000   Min.   :0.000000   Min.   :0.0000  
+##  1st Qu.: 0.000   1st Qu.:0.00000   1st Qu.:0.000000   1st Qu.:0.0000  
+##  Median : 0.000   Median :0.00000   Median :0.000000   Median :0.0000  
+##  Mean   : 9.003   Mean   :0.02963   Mean   :0.005899   Mean   :0.3105  
+##  3rd Qu.:20.000   3rd Qu.:0.00000   3rd Qu.:0.000000   3rd Qu.:1.0000  
+##  Max.   :70.000   Max.   :1.00000   Max.   :1.000000   Max.   :1.0000  
+##  NA's   :29       NA's   :53                                           
+##     diabetes          totChol          sysBP           diaBP       
+##  Min.   :0.00000   Min.   :107.0   Min.   : 83.5   Min.   : 48.00  
+##  1st Qu.:0.00000   1st Qu.:206.0   1st Qu.:117.0   1st Qu.: 75.00  
+##  Median :0.00000   Median :234.0   Median :128.0   Median : 82.00  
+##  Mean   :0.02572   Mean   :236.7   Mean   :132.4   Mean   : 82.89  
+##  3rd Qu.:0.00000   3rd Qu.:263.0   3rd Qu.:144.0   3rd Qu.: 89.88  
+##  Max.   :1.00000   Max.   :696.0   Max.   :295.0   Max.   :142.50  
+##                    NA's   :50                                      
+##       BMI          heartRate         glucose         TenYearCHD   
+##  Min.   :15.54   Min.   : 44.00   Min.   : 40.00   Min.   :0.000  
+##  1st Qu.:23.07   1st Qu.: 68.00   1st Qu.: 71.00   1st Qu.:0.000  
+##  Median :25.40   Median : 75.00   Median : 78.00   Median :0.000  
+##  Mean   :25.80   Mean   : 75.88   Mean   : 81.97   Mean   :0.152  
+##  3rd Qu.:28.04   3rd Qu.: 83.00   3rd Qu.: 87.00   3rd Qu.:0.000  
+##  Max.   :56.80   Max.   :143.00   Max.   :394.00   Max.   :1.000  
+##  NA's   :19      NA's   :1        NA's   :388
+# Remove rows with missing values
+df_cleaned <- na.omit(framingham)
+# Check structure
+str(df_cleaned)
+## tibble [3,656 × 16] (S3: tbl_df/tbl/data.frame)
+##  $ male           : num [1:3656] 1 0 1 0 0 0 0 0 1 1 ...
+##  $ age            : num [1:3656] 39 46 48 61 46 43 63 45 52 43 ...
+##  $ education      : num [1:3656] 4 2 1 3 3 2 1 2 1 1 ...
+##  $ currentSmoker  : num [1:3656] 0 0 1 1 1 0 0 1 0 1 ...
+##  $ cigsPerDay     : num [1:3656] 0 0 20 30 23 0 0 20 0 30 ...
+##  $ BPMeds         : num [1:3656] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ prevalentStroke: num [1:3656] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ prevalentHyp   : num [1:3656] 0 0 0 1 0 1 0 0 1 1 ...
+##  $ diabetes       : num [1:3656] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ totChol        : num [1:3656] 195 250 245 225 285 228 205 313 260 225 ...
+##  $ sysBP          : num [1:3656] 106 121 128 150 130 ...
+##  $ diaBP          : num [1:3656] 70 81 80 95 84 110 71 71 89 107 ...
+##  $ BMI            : num [1:3656] 27 28.7 25.3 28.6 23.1 ...
+##  $ heartRate      : num [1:3656] 80 95 75 65 85 77 60 79 76 93 ...
+##  $ glucose        : num [1:3656] 77 76 70 103 85 99 85 78 79 88 ...
+##  $ TenYearCHD     : num [1:3656] 0 0 0 1 0 0 1 0 0 0 ...
+##  - attr(*, "na.action")= 'omit' Named int [1:582] 15 22 27 34 37 43 50 55 71 73 ...
+##   ..- attr(*, "names")= chr [1:582] "15" "22" "27" "34" ...
+# Set seed for reproducibility
+set.seed(1)
+# Partition the data (70% training, 30% test)
+sample <- sample(2, nrow(df_cleaned), replace = TRUE, prob = c(0.7, 0.3))
+train <- df_cleaned[sample == 1, ]
+test <- df_cleaned[sample == 2, ]
+# Fit logistic regression model
+model <- glm(TenYearCHD ~ ., family = "binomial", data = train)
+# View model summary
+summary(model)
+## 
+## Call:
+## glm(formula = TenYearCHD ~ ., family = "binomial", data = train)
+## 
+## Coefficients:
+##                  Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)     -7.809903   0.878084  -8.894  < 2e-16 ***
+## male             0.615867   0.135028   4.561 5.09e-06 ***
+## age              0.063018   0.008301   7.591 3.16e-14 ***
+## education       -0.138779   0.063526  -2.185  0.02892 *  
+## currentSmoker   -0.026084   0.193772  -0.135  0.89292    
+## cigsPerDay       0.023836   0.007511   3.174  0.00151 ** 
+## BPMeds           0.076216   0.299883   0.254  0.79938    
+## prevalentStroke  0.091987   0.629851   0.146  0.88388    
+## prevalentHyp     0.303433   0.169124   1.794  0.07279 .  
+## diabetes        -0.031593   0.371573  -0.085  0.93224    
+## totChol          0.003465   0.001366   2.537  0.01118 *  
+## sysBP            0.015661   0.004626   3.386  0.00071 ***
+## diaBP           -0.009418   0.007770  -1.212  0.22549    
+## BMI              0.002803   0.015485   0.181  0.85636    
+## heartRate       -0.007414   0.005233  -1.417  0.15656    
+## glucose          0.008155   0.002578   3.163  0.00156 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 2093.5  on 2547  degrees of freedom
+## Residual deviance: 1828.2  on 2532  degrees of freedom
+## AIC: 1860.2
+## 
+## Number of Fisher Scoring iterations: 5
+# Predict probabilities for training set
+p_train <- predict(model, train, type = "response")
+head(p_train)
+##          1          2          3          4          5          6 
+## 0.02918379 0.03938243 0.15720097 0.07979198 0.06250823 0.21098195
+# Predict probabilities for test set
+p_test <- predict(model, newdata = test, type = "response")
+# Manual probability calculation for the first observation in test set
+first_patient <- test[1, ]
+coefs <- coef(model)
+linear_sum <- sum(coefs * c(1, as.numeric(first_patient[-which(names(first_patient) == "TenYearCHD")])))
+manual_prob <- exp(linear_sum) / (1 + exp(linear_sum))
+print(paste("Manual Probability (1st patient):", round(manual_prob, 4)))
+## [1] "Manual Probability (1st patient): 0.328"
+# Confusion matrix with default threshold 0.5
+predicted_test <- ifelse(p_test > 0.5, 1, 0)
+conf_matrix <- table(Predicted = predicted_test, Actual = test$TenYearCHD)
+print("Confusion Matrix:")
+## [1] "Confusion Matrix:"
+print(conf_matrix)
+##          Actual
+## Predicted   0   1
+##         0 913 182
+##         1   3  10
+# Calculate sensitivity and specificity
+true_positive <- conf_matrix["1", "1"]
+false_negative <- conf_matrix["0", "1"]
+true_negative <- conf_matrix["0", "0"]
+false_positive <- conf_matrix["1", "0"]
+sensitivity <- true_positive / (true_positive + false_negative)
+specificity <- true_negative / (true_negative + false_positive)
+print(paste("Sensitivity:", round(sensitivity, 3)))
+## [1] "Sensitivity: 0.052"
+print(paste("Specificity:", round(specificity, 3)))
+## [1] "Specificity: 0.997"
+# ROC Curve and AUC
+roc_score <- roc(test$TenYearCHD, p_test)
+## Setting levels: control = 0, case = 1
+## Setting direction: controls < cases
+plot(roc_score,
+     main = "ROC Curve - Logistic Regression (CHD Prediction)",
+     xlab = "1 - Specificity", ylab = "Sensitivity",
+     print.thres = "best", legacy.axes = TRUE, col = "blue", lwd = 2)
+ 
+auc_value <- auc(roc_score)
+print(paste("AUC:", round(auc_value, 3)))
+## [1] "AUC: 0.712"
+INTERPRETATION
+In this analysis, we used the Framingham Heart Study dataset to build a logistic regression model to predict whether a person is likely to develop coronary heart disease (CHD) within 10 years.
+
+Model Summary
+The model included all available predictors such as age, sex, smoking status, blood pressure, cholesterol levels, glucose, BMI, and other medical conditions. According to the model summary:
+•	Some variables like male, age, cigarettes per day, total cholesterol, systolic blood pressure, and glucose were statistically significant. This means they have a strong relationship with CHD risk.
+•	The variable age had a positive coefficient, which means that as age increases, the risk of CHD also increases.
+Manual Probability Calculation
+We manually calculated the predicted probability for the first patient in the test dataset. The result was approximately 0.328, or 32.8%, which means there is a 32.8% chance that this person will develop CHD within 10 years based on their profile.
+Confusion Matrix
+After making predictions on the test dataset using a threshold of 0.5, we created a confusion matrix:
+•	True Negatives (TN): 913
+•	False Negatives (FN): 182
+•	True Positives (TP): 10
+•	False Positives (FP): 3
+•	Sensitivity: 0.052 (5.2%) – This tells us the model correctly identified only 5.2% of people who actually had CHD.
+•	Specificity: 0.997 (99.7%) – This shows the model correctly identified 99.7% of people who did not have CHD.
+This shows that the model is very good at predicting people who do not have CHD but not good at identifying those who do. This could be because the number of CHD cases in the data is much smaller than the non-CHD cases.
+ROC Curve and AUC
+The ROC curve is a graph that shows how well the model separates positive and negative cases. The AUC (Area Under the Curve) was 0.712, which means the model has a moderate ability to distinguish between people with and without CHD. A perfect model would have an AUC close to 1.
+CONCLUSION
+The logistic regression model found several important factors that are linked to CHD risk. However, the model's low sensitivity means it misses many actual CHD cases. To improve the model, we could try adjusting the threshold, balancing the data, or using more advanced machine learning models.
+
